@@ -1,0 +1,91 @@
+from telegram import Update
+from telegram.ext import Updater, CommandHandler, MessageHandler, CallbackContext, Filters
+
+# Словарь для хранения информации о товарах
+inventory = {}
+
+def start(update: Update, context: CallbackContext) -> None:
+    update.message.reply_text('Привет! Я бот управления складом. Используй команды /add, /update, /delete, /list.')
+
+def add_item(update: Update, context: CallbackContext) -> None:
+    chat_id = update.message.chat_id
+    message_text = update.message.text.split(maxsplit=1)[1]
+
+    # Парсим информацию о товаре
+    try:
+        name, description, price, quantity = message_text.split(',')
+        price = float(price)
+        quantity = int(quantity)
+    except ValueError:
+        update.message.reply_text('Ошибка в формате ввода. Используйте: /add Название, Описание, Цена, Количество')
+        return
+
+    # Добавляем товар в склад
+    if name in inventory:
+        update.message.reply_text(f'Товар "{name}" уже есть на складе.')
+    else:
+        inventory[name] = {'description': description, 'price': price, 'quantity': quantity}
+        update.message.reply_text(f'Товар "{name}" добавлен на склад.')
+
+def update_item(update: Update, context: CallbackContext) -> None:
+    chat_id = update.message.chat_id
+    message_text = update.message.text.split(maxsplit=1)[1]
+
+    # Парсим информацию о товаре
+    try:
+        name, field, value = map(str.strip, message_text.split(',', 2))
+    except ValueError:
+        update.message.reply_text('Ошибка в формате ввода. Используйте: /update Название, Поле, Новое_Значение')
+        return
+
+    # Обновляем информацию о товаре
+    if name in inventory:
+        if field.lower() in inventory[name]:
+            inventory[name][field.lower()] = value
+            update.message.reply_text(f'Информация о товаре "{name}" обновлена.')
+        else:
+            update.message.reply_text(f'У товара "{name}" нет поля "{field}".')
+    else:
+        update.message.reply_text(f'Товар "{name}" не найден на складе.')
+
+def delete_item(update: Update, context: CallbackContext) -> None:
+    chat_id = update.message.chat_id
+    name = update.message.text.split(maxsplit=1)[1]
+
+    # Удаляем товар со склада
+    if name in inventory:
+        del inventory[name]
+        update.message.reply_text(f'Товар "{name}" удален со склада.')
+    else:
+        update.message.reply_text(f'Товар "{name}" не найден на складе.')
+
+def list_items(update: Update, context: CallbackContext) -> None:
+    chat_id = update.message.chat_id
+
+    # Выводим список товаров на складе
+    if inventory:
+        items_list = '\n'.join([f'{name}: {info["description"]}, Цена: {info["price"]}, Количество: {info["quantity"]}' for name, info in inventory.items()])
+        update.message.reply_text(f'Товары на складе:\n{items_list}')
+    else:
+        update.message.reply_text('Склад пуст.')
+
+def main() -> None:
+    # Замените 'YOUR_BOT_TOKEN' на реальный токен вашего бота
+    updater = Updater("6840426089:AAG_AHzsuAwdyc_eEF1dpNmooXRtr4rwpl0", use_context=True)
+
+    dp = updater.dispatcher
+
+    dp.add_handler(CommandHandler("start", start))
+    dp.add_handler(CommandHandler("add", add_item))
+    dp.add_handler(CommandHandler("update", update_item))
+    dp.add_handler(CommandHandler("delete", delete_item))
+    dp.add_handler(CommandHandler("list", list_items))
+
+    updater.start_polling()
+
+    print("Бот запущен. Ожидание обновлений...")
+
+    updater.idle()
+
+if __name__ == '__main__':
+    main()
