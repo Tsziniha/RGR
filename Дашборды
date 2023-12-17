@@ -1,0 +1,104 @@
+import dash
+from dash import dcc, html
+from dash.dependencies import Input, Output
+import plotly.graph_objects as go
+import plotly.express as px
+import pandas as pd
+
+# Загрузка данных
+df = pd.read_csv(r'C:\Users\tszin\PycharmProjects\pythonProject8\TextFile1.csv')
+
+# Создание экземпляра приложения
+app = dash.Dash(__name__)
+
+# Определение структуры дашборда
+app.layout = html.Div([
+    html.Div([
+        html.H1('Дашборд анализа данных о количестве проданных товаров', style={'textAlign': 'center'}),
+        html.P('Этот дашборд предоставляет информацию о количестве проданных товаров в различные дни.',
+               style={'textAlign': 'center'}),
+        html.Div([
+            html.Label('Список товаров:', style={'fontSize': 18}),
+            dcc.Dropdown(
+                id='date-dropdown',
+                options=[{'label': date, 'value': date} for date in df['product']],
+                value=df['product'].iloc[0],
+                clearable=False,
+                style={'width': '50%', 'margin': '0 auto'}
+            ),
+        ], style={'textAlign': 'center', 'marginBottom': '30px'}),
+    ], style={'marginBottom': '30px'}),
+
+    html.Div([
+        # Линейный график
+        dcc.Graph(id='line-chart'),
+    ], style={'width': '48%', 'display': 'inline-block'}),
+
+    html.Div([
+        # Гистограмма
+        dcc.Graph(id='histogram'),
+    ], style={'width': '48%', 'display': 'inline-block'}),
+
+    html.Div([
+        # Круговая диаграмма
+        dcc.Graph(id='pie-chart'),
+    ], style={'width': '48%', 'display': 'inline-block'}),
+
+    html.Div([
+        # Ящик с усами
+        dcc.Graph(id='box-plot'),
+    ], style={'width': '48%', 'display': 'inline-block'}),
+
+    html.Div([
+        # Точечный график
+        dcc.Graph(id='scatter-plot'),
+    ], style={'width': '48%', 'display': 'inline-block'}),
+
+], style={'padding': '20px'})
+
+# Определение логики дашборда
+@app.callback(
+    Output('line-chart', 'figure'),
+    Output('histogram', 'figure'),
+    Output('pie-chart', 'figure'),
+    Output('box-plot', 'figure'),
+    Output('scatter-plot', 'figure'),
+    [Input('date-dropdown', 'value')]
+)
+def update_charts(selected_date):
+    # Линейный график
+    line_chart = px.line(df, x='product', y='price')
+    line_chart.update_layout(title='Линейный график',
+                             xaxis_title='Товар',
+                             yaxis_title='Цена',
+                             plot_bgcolor='rgb(230, 230, 230)')
+
+    # Гистограмма
+    histogram = px.histogram(df, x='quantity')
+    histogram.update_layout(title='Гистограмма',
+                            xaxis_title='Остаток на складе',
+                            yaxis_title='Количество товара по остатку',
+                            plot_bgcolor='rgb(230, 230, 230)')
+
+    # Круговая диаграмма
+    pie_chart = px.pie(df, names='product', values='quantity', title='Круговая диаграмма')
+
+    # Боксплот
+    box_plot = px.box(df, x='product', y='quantity')
+    box_plot.update_layout(title='Боксплот',
+                           xaxis_title='Товар',
+                           yaxis_title='Остаток на складе',
+                           plot_bgcolor='rgb(230, 230, 230)')
+
+    # Точечный график
+    scatter_plot = px.scatter(df, x='product', y='price')
+    scatter_plot.update_layout(title='Точечный график',
+                               xaxis_title='Товар',
+                               yaxis_title='Цена',
+                               plot_bgcolor='rgb(230, 230, 230)')
+
+    return line_chart, histogram, pie_chart, box_plot, scatter_plot
+
+# Запуск приложения
+if __name__ == '__main__':
+    app.run_server(debug=True)
