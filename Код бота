@@ -1,11 +1,16 @@
+import csv
 from telegram import Update
 from telegram.ext import Updater, CommandHandler, MessageHandler, CallbackContext, Filters
 
 # Словарь для хранения информации о товарах
 inventory = {}
 
+csv_file_path = "TextFile1.csv"
+
+dashboard_url = "http://127.0.0.1:8050/"
+
 def start(update: Update, context: CallbackContext) -> None:
-    update.message.reply_text('Привет! Я бот управления складом. Используй команды /add, /update, /delete, /list.')
+    update.message.reply_text('Привет! Я бот управления складом. Используй команды /add, /update, /delete, /list, /dashboard.')
 
 def add_item(update: Update, context: CallbackContext) -> None:
     chat_id = update.message.chat_id
@@ -13,19 +18,31 @@ def add_item(update: Update, context: CallbackContext) -> None:
 
     # Парсим информацию о товаре
     try:
-        name, description, price, quantity = message_text.split(',')
+        name, description, price, quantity, sold_quantity = message_text.split(',')
         price = float(price)
         quantity = int(quantity)
+        sold_quantity = int(sold_quantity)
     except ValueError:
-        update.message.reply_text('Ошибка в формате ввода. Используйте: /add Название, Описание, Цена, Количество')
+        update.message.reply_text('Ошибка в формате ввода. Используйте: /add Название, Описание, Цена, Количество, Продано')
         return
 
-    # Добавляем товар в склад
+    # Проверяем, существует ли товар с таким названием
     if name in inventory:
-        update.message.reply_text(f'Товар "{name}" уже есть на складе.')
+        # Обновляем информацию о товаре в словаре
+        inventory[name] = {'description': description, 'price': price, 'quantity': quantity, 'sold_quantity': sold_quantity}
+        update.message.reply_text(f'Информация о товаре "{name}" обновлена.')
     else:
-        inventory[name] = {'description': description, 'price': price, 'quantity': quantity}
+        # Добавляем новый товар в словарь
+        inventory[name] = {'description': description, 'price': price, 'quantity': quantity, 'sold_quantity': sold_quantity}
         update.message.reply_text(f'Товар "{name}" добавлен на склад.')
+
+    # Обновляем CSV файл
+    with open(csv_file_path, mode='w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(['Name', 'Description', 'Price', 'Quantity', 'Sold_Quantity'])
+        for item_name, item_info in inventory.items():
+            writer.writerow([item_name, item_info['description'], item_info['price'], item_info['quantity'], item_info['sold_quantity']])
+
 
 def update_item(update: Update, context: CallbackContext) -> None:
     chat_id = update.message.chat_id
@@ -33,31 +50,45 @@ def update_item(update: Update, context: CallbackContext) -> None:
 
     # Парсим информацию о товаре
     try:
-        name, field, value = map(str.strip, message_text.split(',', 2))
+        name, description, price, quantity, sold_quantity = message_text.split(',')
+        price = float(price)
+        quantity = int(quantity)
+        sold_quantity = int(sold_quantity)
     except ValueError:
-        update.message.reply_text('Ошибка в формате ввода. Используйте: /update Название, Поле, Новое_Значение')
+        update.message.reply_text('Ошибка в формате ввода. Используйте: /update Название, Описание, Цена, Количество, Продано')
         return
 
-    # Обновляем информацию о товаре
+    # Обновляем информацию о товаре в словаре
     if name in inventory:
-        if field.lower() in inventory[name]:
-            inventory[name][field.lower()] = value
-            update.message.reply_text(f'Информация о товаре "{name}" обновлена.')
-        else:
-            update.message.reply_text(f'У товара "{name}" нет поля "{field}".')
+        inventory[name] = {'description': description, 'price': price, 'quantity': quantity, 'sold_quantity': sold_quantity}
+        update.message.reply_text(f'Информация о товаре "{name}" обновлена.')
+
+        # Обновляем CSV файл
+        with open(csv_file_path, mode='w', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow(['Name', 'Description', 'Price', 'Quantity', 'Sold_Quantity'])
+            for item_name, item_info in inventory.items():
+                writer.writerow([item_name, item_info['description'], item_info['price'], item_info['quantity'], item_info['sold_quantity']])
     else:
         update.message.reply_text(f'Товар "{name}" не найден на складе.')
 
 def delete_item(update: Update, context: CallbackContext) -> None:
     chat_id = update.message.chat_id
-    name = update.message.text.split(maxsplit=1)[1]
+    item_name = update.message.text.split(maxsplit=1)[1]
 
-    # Удаляем товар со склада
-    if name in inventory:
-        del inventory[name]
-        update.message.reply_text(f'Товар "{name}" удален со склада.')
+    # Удаляем товар из словаря
+    if item_name in inventory:
+        del inventory[item_name]
+        update.message.reply_text(f'Товар "{item_name}" удален.')
+
+        # Обновляем CSV файл
+        with open(csv_file_path, mode='w', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow(['Name', 'Description', 'Price', 'Quantity', 'Sold_Quantity'])
+            for item_name, item_info in inventory.items():
+                writer.writerow([item_name, item_info['description'], item_info['price'], item_info['quantity'], item_info['sold_quantity']])
     else:
-        update.message.reply_text(f'Товар "{name}" не найден на складе.')
+        update.message.reply_text(f'Товар "{item_name}" не найден на складе.')
 
 def list_items(update: Update, context: CallbackContext) -> None:
     chat_id = update.message.chat_id
@@ -68,6 +99,10 @@ def list_items(update: Update, context: CallbackContext) -> None:
         update.message.reply_text(f'Товары на складе:\n{items_list}')
     else:
         update.message.reply_text('Склад пуст.')
+
+
+def dashboard(update: Update, context: CallbackContext) -> None:
+    update.message.reply_text(f'Вот ваш дашборд: {dashboard_url}')
 
 def main() -> None:
     # Замените 'YOUR_BOT_TOKEN' на реальный токен вашего бота
@@ -80,6 +115,7 @@ def main() -> None:
     dp.add_handler(CommandHandler("update", update_item))
     dp.add_handler(CommandHandler("delete", delete_item))
     dp.add_handler(CommandHandler("list", list_items))
+    dp.add_handler(CommandHandler("dashboard", dashboard))
 
     updater.start_polling()
 
