@@ -6,7 +6,7 @@ import plotly.express as px
 import pandas as pd
 
 # Загрузка данных
-df = pd.read_csv(r'C:\Users\tszin\PycharmProjects\pythonProject8\TextFile1.csv')
+df = pd.read_csv(r'C:\Users\tszin\PycharmProjects\pythonProject7\TextFile1.csv')
 
 # Создание экземпляра приложения
 app = dash.Dash(__name__)
@@ -21,8 +21,8 @@ app.layout = html.Div([
             html.Label('Список товаров:', style={'fontSize': 18}),
             dcc.Dropdown(
                 id='date-dropdown',
-                options=[{'label': date, 'value': date} for date in df['product']],
-                value=df['product'].iloc[0],
+                options=[{'label': date, 'value': date} for date in df['Name']],
+                value=df['Name'].iloc[0],
                 clearable=False,
                 style={'width': '50%', 'margin': '0 auto'}
             ),
@@ -67,31 +67,31 @@ app.layout = html.Div([
 )
 def update_charts(selected_date):
     # Линейный график
-    line_chart = px.line(df, x='product', y='price')
+    line_chart = px.line(df, x='Name', y='Price')
     line_chart.update_layout(title='Линейный график',
                              xaxis_title='Товар',
                              yaxis_title='Цена',
                              plot_bgcolor='rgb(230, 230, 230)')
 
     # Гистограмма
-    histogram = px.histogram(df, x='quantity')
+    histogram = px.histogram(df, x='Quantity')
     histogram.update_layout(title='Гистограмма',
                             xaxis_title='Остаток на складе',
                             yaxis_title='Количество товара по остатку',
                             plot_bgcolor='rgb(230, 230, 230)')
 
     # Круговая диаграмма
-    pie_chart = px.pie(df, names='product', values='quantity', title='Круговая диаграмма')
+    pie_chart = px.pie(df, names='Name', values='Quantity', title='Круговая диаграмма')
 
     # Боксплот
-    box_plot = px.box(df, x='product', y='quantity')
+    box_plot = px.box(df, x='Name', y='Quantity')
     box_plot.update_layout(title='Боксплот',
                            xaxis_title='Товар',
                            yaxis_title='Остаток на складе',
                            plot_bgcolor='rgb(230, 230, 230)')
 
     # Точечный график
-    scatter_plot = px.scatter(df, x='product', y='price')
+    scatter_plot = px.scatter(df, x='Name', y='Price')
     scatter_plot.update_layout(title='Точечный график',
                                xaxis_title='Товар',
                                yaxis_title='Цена',
